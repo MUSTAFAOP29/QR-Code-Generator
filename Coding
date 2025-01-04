@@ -1,0 +1,63 @@
+import qrcode
+from PIL import Image
+import streamlit as st
+import io
+
+# Get user input for the URL
+st.title("QR Code Generator")
+data = st.text_input("Enter the URL or text to encode in the QR Code: ")
+
+# Get user input for the file name
+file_name = st.text_input("Enter the name of the file (without extension) to save the QR Code: ") + ".png"
+
+# Create a QR Code instance
+qr = qrcode.QRCode(
+    version=1,  # Controls the size of the QR Code (1 = 21x21 grid)
+    error_correction=qrcode.constants.ERROR_CORRECT_H,  # Higher error correction for better scannability
+    box_size=10,  # Size of each box in the QR Code grid
+    border=4,  # Border size (minimum is 4)
+)
+
+# Add data to the QR Code
+qr.add_data(data)
+qr.make(fit=True)
+
+# Create an image of the QR Code
+img = qr.make_image(fill_color="black", back_color="white")
+
+# Open the logo image
+logo = Image.open("logo.png")  # Path to your logo image
+
+# Calculate the dimensions of the logo
+logo_width, logo_height = logo.size
+qr_width, qr_height = img.size
+logo_size = int(min(qr_width, qr_height) / 7)  # Set logo size to 1/7 of QR code size (smaller)
+
+# Resize the logo while maintaining its aspect ratio
+logo = logo.resize((logo_size, logo_size))
+
+# Calculate position for the logo to be in the center
+logo_position = ((qr_width - logo_size) // 2, (qr_height - logo_size) // 2)
+
+# Ensure the logo has transparency
+if logo.mode != "RGBA":
+    logo = logo.convert("RGBA")
+
+# Paste the logo on the QR code using the alpha channel as mask for transparency
+img.paste(logo, logo_position, mask=logo.split()[3])  # Use the alpha channel for masking
+
+# Convert image to BytesIO object for display and download
+img_bytes = io.BytesIO()
+img.save(img_bytes, format='PNG')
+img_bytes.seek(0)
+
+# Display the QR code with the logo in the app
+st.image(img_bytes)
+
+# Create download button
+st.download_button(
+    label="Download QR Code",
+    data=img_bytes,
+    file_name=file_name,
+    mime="image/png"
+)
